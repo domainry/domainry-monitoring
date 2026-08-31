@@ -3,6 +3,7 @@ package module
 import (
 	"context"
 
+	"github.com/domainry/domainry-foundation/modulehttp"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
 	monitoringapplication "github.com/domainry/domainry-monitoring/internal/application/monitoring"
@@ -11,6 +12,7 @@ import (
 type binding struct {
 	runtimeID string
 	host      modulehost.Host
+	surfaces  []modulehttp.Surface
 }
 
 func (*binding) Descriptor() monitoringsdk.Descriptor {
@@ -33,5 +35,9 @@ func (b *binding) MigrationTelemetry(ctx context.Context) (int, bool, error) {
 	return b.host.Migration().Telemetry(ctx)
 }
 func (*binding) Close(context.Context) error { return nil }
+func (b *binding) HTTPSurfaces() []modulehttp.Surface {
+	return append([]modulehttp.Surface(nil), b.surfaces...)
+}
 
 var _ monitoringsdk.Binding = (*binding)(nil)
+var _ modulehttp.Provider = (*binding)(nil)

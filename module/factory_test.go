@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/domainry/domainry-foundation/modulehttp"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
 )
@@ -63,6 +64,13 @@ func TestModuleAggregatesHealthAndMetrics(t *testing.T) {
 	metrics := binding.Metrics(t.Context())
 	if metrics["objects"] != 2 || metrics["errors"] == nil {
 		t.Fatalf("metrics=%#v", metrics)
+	}
+	provider, ok := binding.(modulehttp.Provider)
+	if !ok || len(provider.HTTPSurfaces()) != 1 {
+		t.Fatalf("Monitoring HTTP surfaces=%v", provider)
+	}
+	if err := modulehttp.ValidateSurface(provider.HTTPSurfaces()[0]); err != nil {
+		t.Fatal(err)
 	}
 }
 

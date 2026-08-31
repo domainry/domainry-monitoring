@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/domainry/domainry-foundation/modulehttp"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
+	monitoringhttp "github.com/domainry/domainry-monitoring/internal/transport/http/module"
 )
 
 type Options struct{}
@@ -27,7 +29,13 @@ func (*Factory) OpenModule(_ context.Context, application monitoringsdk.Applicat
 	if host == nil || host.Storage() == nil || host.Migration() == nil || host.Scheduler() == nil || host.Lifecycle() == nil || host.Metrics() == nil {
 		return nil, fmt.Errorf("Monitoring host is incomplete")
 	}
-	return &binding{runtimeID: application.RuntimeID, host: host}, nil
+	result := &binding{runtimeID: application.RuntimeID, host: host}
+	surface, err := monitoringhttp.NewSurface(result)
+	if err != nil {
+		return nil, err
+	}
+	result.surfaces = []modulehttp.Surface{surface}
+	return result, nil
 }
 
 var _ monitoringsdk.Factory = (*Factory)(nil)
