@@ -1,4 +1,4 @@
-package application
+package monitoring
 
 import "github.com/domainry/domainry-monitoring-sdk/contract"
 

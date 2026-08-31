@@ -1,4 +1,3 @@
-// Package module assembles Monitoring over observations borrowed from its host.
 package module
 
 import (

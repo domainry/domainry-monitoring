@@ -1,24 +1,24 @@
-package server
+package http
 
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
+	stdhttp "net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/domainry/domainry-monitoring-sdk/contract"
 )
 
-func TestServerEvaluatesAuthenticatedHealth(t *testing.T) {
+func TestHandlerEvaluatesAuthenticatedHealth(t *testing.T) {
 	handler := New(Options{BearerToken: "secret"}).Routes()
 	input := contract.HealthRequest{RuntimeID: "runtime-1", Identity: contract.Identity{TemplateID: "template"}, Storage: contract.ComponentObservation{Payload: map[string]any{"ping": "ok"}}, Migration: contract.MigrationObservation{Current: true, Payload: map[string]any{"current": true}}, Scheduler: contract.ComponentObservation{Payload: map[string]any{"runtime_available": true}}, Lifecycle: contract.ComponentObservation{Payload: map[string]any{}}}
 	body, _ := json.Marshal(input)
-	request := httptest.NewRequest(http.MethodPost, "/v1/health", bytes.NewReader(body))
+	request := httptest.NewRequest(stdhttp.MethodPost, "/v1/health", bytes.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
-	if response.Code != http.StatusOK {
+	if response.Code != stdhttp.StatusOK {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
 	var payload map[string]any
@@ -27,18 +27,18 @@ func TestServerEvaluatesAuthenticatedHealth(t *testing.T) {
 	}
 }
 
-func TestServerRejectsUnauthorizedAndInvalidRequests(t *testing.T) {
+func TestHandlerRejectsUnauthorizedAndInvalidRequests(t *testing.T) {
 	handler := New(Options{BearerToken: "secret"}).Routes()
 	unauthorized := httptest.NewRecorder()
-	handler.ServeHTTP(unauthorized, httptest.NewRequest(http.MethodGet, "/v1/descriptor", nil))
-	if unauthorized.Code != http.StatusUnauthorized {
+	handler.ServeHTTP(unauthorized, httptest.NewRequest(stdhttp.MethodGet, "/v1/descriptor", nil))
+	if unauthorized.Code != stdhttp.StatusUnauthorized {
 		t.Fatalf("status=%d", unauthorized.Code)
 	}
 	invalid := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/v1/metrics", bytes.NewBufferString(`{"unknown":true}`))
+	request := httptest.NewRequest(stdhttp.MethodPost, "/v1/metrics", bytes.NewBufferString(`{"unknown":true}`))
 	request.Header.Set("Authorization", "Bearer secret")
 	handler.ServeHTTP(invalid, request)
-	if invalid.Code != http.StatusBadRequest {
+	if invalid.Code != stdhttp.StatusBadRequest {
 		t.Fatalf("status=%d", invalid.Code)
 	}
 }

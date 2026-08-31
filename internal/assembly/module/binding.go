@@ -5,7 +5,7 @@ import (
 
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
-	monitoringapplication "github.com/domainry/domainry-monitoring/application"
+	monitoringapplication "github.com/domainry/domainry-monitoring/internal/application/monitoring"
 )
 
 type binding struct {

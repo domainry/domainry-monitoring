@@ -1,4 +1,4 @@
-package server_test
+package saas_test
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
 	"github.com/domainry/domainry-monitoring-sdk/remote"
-	monitoringserver "github.com/domainry/domainry-monitoring/server"
+	monitoringmodule "github.com/domainry/domainry-monitoring/module"
+	monitoringsaas "github.com/domainry/domainry-monitoring/saas"
 )
 
 type remoteHost struct{}
@@ -50,7 +51,7 @@ func (remoteMetrics) Observe(context.Context) (map[string]any, map[string]string
 }
 
 func TestRemoteBindingUsesSaaSEvaluator(t *testing.T) {
-	service := httptest.NewServer(monitoringserver.New(monitoringserver.Options{BearerToken: "secret"}).Routes())
+	service := httptest.NewServer(monitoringsaas.New(monitoringsaas.Options{BearerToken: "secret"}).Routes())
 	defer service.Close()
 	factory := remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "secret", Client: service.Client()})
 	binding, err := factory.OpenSaaS(t.Context(), monitoringsdk.ApplicationRef{RuntimeID: "runtime-1"}, remoteHost{})
@@ -60,21 +61,43 @@ func TestRemoteBindingUsesSaaSEvaluator(t *testing.T) {
 	if binding.Descriptor().Mode != monitoringsdk.DeploymentModeSaaS {
 		t.Fatalf("descriptor=%#v", binding.Descriptor())
 	}
-	health := binding.Health(t.Context())
-	if health["status"] != "ok" || health["runtime_id"] != "runtime-1" {
+	if health := binding.Health(t.Context()); health["status"] != "ok" || health["runtime_id"] != "runtime-1" {
 		t.Fatalf("health=%#v", health)
 	}
-	metrics := binding.Metrics(t.Context())
-	if metrics["objects"] != float64(3) || metrics["runtime_id"] != "runtime-1" {
+	if metrics := binding.Metrics(t.Context()); metrics["objects"] != float64(3) || metrics["runtime_id"] != "runtime-1" {
 		t.Fatalf("metrics=%#v", metrics)
 	}
 }
 
 func TestRemoteBindingRejectsWrongToken(t *testing.T) {
-	service := httptest.NewServer(monitoringserver.New(monitoringserver.Options{BearerToken: "secret"}).Routes())
+	service := httptest.NewServer(monitoringsaas.New(monitoringsaas.Options{BearerToken: "secret"}).Routes())
 	defer service.Close()
 	_, err := remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "wrong", Client: service.Client()}).OpenSaaS(t.Context(), monitoringsdk.ApplicationRef{RuntimeID: "runtime-1"}, remoteHost{})
 	if err == nil {
 		t.Fatal("unauthorized descriptor accepted")
 	}
+}
+
+func TestModuleAndSaaSTopologiesProduceEquivalentSnapshots(t *testing.T) {
+	application := monitoringsdk.ApplicationRef{RuntimeID: "runtime-1"}
+	moduleBinding, err := monitoringmodule.NewFactory(monitoringmodule.Options{}).OpenModule(t.Context(), application, remoteHost{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := httptest.NewServer(monitoringsaas.New(monitoringsaas.Options{BearerToken: "secret"}).Routes())
+	defer service.Close()
+	remoteBinding, err := remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "secret", Client: service.Client()}).OpenSaaS(t.Context(), application, remoteHost{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !equivalent(moduleBinding.Health(t.Context()), remoteBinding.Health(t.Context())) {
+		t.Fatal("health topology mismatch")
+	}
+	if !equivalent(moduleBinding.Metrics(t.Context()), remoteBinding.Metrics(t.Context())) {
+		t.Fatal("metrics topology mismatch")
+	}
+}
+
+func equivalent(left, right map[string]any) bool {
+	return normalized(left) == normalized(right)
 }
