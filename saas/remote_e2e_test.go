@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/domainry/domainry-foundation/modulehttp"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
 	"github.com/domainry/domainry-monitoring-sdk/remote"
@@ -53,13 +54,19 @@ func (remoteMetrics) Observe(context.Context) (map[string]any, map[string]string
 func TestRemoteBindingUsesSaaSEvaluator(t *testing.T) {
 	service := httptest.NewServer(monitoringsaas.New(monitoringsaas.Options{BearerToken: "secret"}).Routes())
 	defer service.Close()
-	factory := remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "secret", Client: service.Client()})
-	binding, err := factory.OpenSaaS(t.Context(), monitoringsdk.ApplicationRef{RuntimeID: "runtime-1"}, remoteHost{})
+	factory := monitoringmodule.NewSaaSFactory(remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "secret", Client: service.Client()}))
+	binding, err := factory.(interface {
+		OpenSaaS(context.Context, monitoringsdk.ApplicationRef, modulehost.Host) (monitoringsdk.Binding, error)
+	}).OpenSaaS(t.Context(), monitoringsdk.ApplicationRef{RuntimeID: "runtime-1"}, remoteHost{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if binding.Descriptor().Mode != monitoringsdk.DeploymentModeSaaS {
 		t.Fatalf("descriptor=%#v", binding.Descriptor())
+	}
+	provider, ok := binding.(modulehttp.Provider)
+	if !ok || len(provider.HTTPSurfaces()) != 1 || provider.HTTPSurfaces()[0].Routes()[0].Pattern != "GET /operations/monitoring/metrics" {
+		t.Fatalf("SaaS Monitoring HTTP surfaces=%v", provider)
 	}
 	if health := binding.Health(t.Context()); health["status"] != "ok" || health["runtime_id"] != "runtime-1" {
 		t.Fatalf("health=%#v", health)
