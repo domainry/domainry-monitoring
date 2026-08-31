@@ -22,7 +22,7 @@ func repositoryRoot(t *testing.T) string {
 
 func TestMonitoringUsesLayeredSourceLayout(t *testing.T) {
 	root := repositoryRoot(t)
-	for _, required := range []string{"cmd/monitoring-server", "internal/application/monitoring", "internal/assembly/module", "internal/assembly/saas", "internal/transport/http", "module", "saas"} {
+	for _, required := range []string{"cmd/monitoring-server", "internal/application/monitoring", "internal/assembly/module", "internal/assembly/saas", "internal/transport/http/module", "internal/transport/http/saas", "module", "saas"} {
 		if info, err := os.Stat(filepath.Join(root, required)); err != nil || !info.IsDir() {
 			t.Errorf("required Monitoring boundary %q is missing", required)
 		}
