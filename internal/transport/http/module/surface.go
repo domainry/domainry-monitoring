@@ -17,6 +17,9 @@ func (*surface) ContractVersion() string { return modulehttp.ContractVersion }
 func (*surface) Owner() string           { return monitoringsdk.MonitoringHTTPSurfaceContract().Owner }
 func (*surface) Name() string            { return monitoringsdk.MonitoringHTTPSurfaceContract().Name }
 func (*surface) Routes() []modulehttp.Route {
+	return monitoringRoutes()
+}
+func monitoringRoutes() []modulehttp.Route {
 	contract := monitoringsdk.MonitoringHTTPSurfaceContract()
 	routes := make([]modulehttp.Route, 0, len(contract.Routes))
 	for _, route := range contract.Routes {
@@ -36,6 +39,9 @@ func (*surface) Routes() []modulehttp.Route {
 	return routes
 }
 func (*surface) OpenAPIOperations() map[string]map[string]any {
+	return monitoringOpenAPIOperations()
+}
+func monitoringOpenAPIOperations() map[string]map[string]any {
 	return monitoringsdk.MonitoringHTTPSurfaceContract().OpenAPI
 }
 func (s *surface) Handler() http.Handler {

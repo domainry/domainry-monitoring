@@ -7,11 +7,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/domainry/domainry-foundation/modulecapability"
 	"github.com/domainry/domainry-monitoring-sdk/contract"
 )
 
 func TestHandlerEvaluatesAuthenticatedHealth(t *testing.T) {
-	handler := New(Options{BearerToken: "secret"}).Routes()
+	server, err := New(Options{BearerToken: "secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Routes()
 	input := contract.HealthRequest{RuntimeID: "runtime-1", Identity: contract.Identity{TemplateID: "template"}, Storage: contract.ComponentObservation{Payload: map[string]any{"ping": "ok"}}, Migration: contract.MigrationObservation{Current: true, Payload: map[string]any{"current": true}}, Scheduler: contract.ComponentObservation{Payload: map[string]any{"runtime_available": true}}, Lifecycle: contract.ComponentObservation{Payload: map[string]any{}}}
 	body, _ := json.Marshal(input)
 	request := httptest.NewRequest(stdhttp.MethodPost, "/v1/health", bytes.NewReader(body))
@@ -28,11 +33,20 @@ func TestHandlerEvaluatesAuthenticatedHealth(t *testing.T) {
 }
 
 func TestHandlerRejectsUnauthorizedAndInvalidRequests(t *testing.T) {
-	handler := New(Options{BearerToken: "secret"}).Routes()
+	server, err := New(Options{BearerToken: "secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.Routes()
 	unauthorized := httptest.NewRecorder()
 	handler.ServeHTTP(unauthorized, httptest.NewRequest(stdhttp.MethodGet, "/v1/descriptor", nil))
 	if unauthorized.Code != stdhttp.StatusUnauthorized {
 		t.Fatalf("status=%d", unauthorized.Code)
+	}
+	capabilityUnauthorized := httptest.NewRecorder()
+	handler.ServeHTTP(capabilityUnauthorized, httptest.NewRequest(stdhttp.MethodGet, modulecapability.SummaryPath, nil))
+	if capabilityUnauthorized.Code != stdhttp.StatusUnauthorized {
+		t.Fatalf("capability status=%d", capabilityUnauthorized.Code)
 	}
 	invalid := httptest.NewRecorder()
 	request := httptest.NewRequest(stdhttp.MethodPost, "/v1/metrics", bytes.NewBufferString(`{"unknown":true}`))

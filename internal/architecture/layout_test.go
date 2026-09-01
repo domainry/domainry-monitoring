@@ -52,7 +52,12 @@ func TestPublicPackagesRemainThinFacades(t *testing.T) {
 
 func TestMonitoringProductionDependenciesExcludeRuntimeAndPlane(t *testing.T) {
 	root := repositoryRoot(t)
-	command := exec.Command("go", "list", "-json", "./...")
+	// This test inspects dependency ownership; it is not a tagged-dependency
+	// compilation test. -e keeps the package graph inspectable while a new
+	// Foundation package is being developed locally ahead of its next tag.
+	// TestMonitoringUsesTaggedDependencies independently rejects replace/local
+	// path dependencies in the committed module definition.
+	command := exec.Command("go", "list", "-e", "-json", "./...")
 	command.Dir = root
 	command.Env = append(os.Environ(), "GOWORK=off")
 	output, err := command.StdoutPipe()

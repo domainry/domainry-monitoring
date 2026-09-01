@@ -7,30 +7,52 @@ import (
 	stdhttp "net/http"
 	"strings"
 
+	"github.com/domainry/domainry-foundation/modulecapability"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/contract"
+	monitoringcapability "github.com/domainry/domainry-monitoring/capability"
 	monitoringapplication "github.com/domainry/domainry-monitoring/internal/application/monitoring"
 )
 
 const maxRequestBytes = 2 << 20
 
 type Options struct{ BearerToken string }
-type Handler struct{ token string }
+type Handler struct {
+	token string
+	mux   *stdhttp.ServeMux
+}
 
-func New(options Options) *Handler { return &Handler{token: strings.TrimSpace(options.BearerToken)} }
+func New(options Options) (*Handler, error) {
+	capability, err := monitoringcapability.Open(monitoringcapability.Inputs{})
+	if err != nil {
+		return nil, err
+	}
+	capabilityHTTP, err := modulecapability.NewHTTPHandler(capability, func(*stdhttp.Request) error { return nil })
+	if err != nil {
+		return nil, err
+	}
+	handler := &Handler{token: strings.TrimSpace(options.BearerToken), mux: stdhttp.NewServeMux()}
+	handler.mux.Handle(modulecapability.SummaryPath, handler.authHandler(capabilityHTTP))
+	handler.mux.Handle(modulecapability.CategoriesPath, handler.authHandler(capabilityHTTP))
+	handler.mux.Handle(modulecapability.ValidationPath, handler.authHandler(capabilityHTTP))
+	handler.register()
+	return handler, nil
+}
 
 func (s *Handler) Routes() stdhttp.Handler {
-	mux := stdhttp.NewServeMux()
-	mux.HandleFunc("GET /live", func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
+	return s.mux
+}
+
+func (s *Handler) register() {
+	s.mux.HandleFunc("GET /live", func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
 		writeJSON(w, stdhttp.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.HandleFunc("GET /ready", func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
+	s.mux.HandleFunc("GET /ready", func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
 		writeJSON(w, stdhttp.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.HandleFunc("GET /v1/descriptor", s.auth(s.descriptor))
-	mux.HandleFunc("POST /v1/health", s.auth(s.health))
-	mux.HandleFunc("POST /v1/metrics", s.auth(s.metrics))
-	return mux
+	s.mux.HandleFunc("GET /v1/descriptor", s.auth(s.descriptor))
+	s.mux.HandleFunc("POST /v1/health", s.auth(s.health))
+	s.mux.HandleFunc("POST /v1/metrics", s.auth(s.metrics))
 }
 
 func (s *Handler) auth(next stdhttp.HandlerFunc) stdhttp.HandlerFunc {
@@ -41,6 +63,12 @@ func (s *Handler) auth(next stdhttp.HandlerFunc) stdhttp.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+func (s *Handler) authHandler(next stdhttp.Handler) stdhttp.Handler {
+	return stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		s.auth(next.ServeHTTP)(w, r)
+	})
 }
 
 func (*Handler) descriptor(w stdhttp.ResponseWriter, _ *stdhttp.Request) {

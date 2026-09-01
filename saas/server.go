@@ -6,4 +6,4 @@ import saasassembly "github.com/domainry/domainry-monitoring/internal/assembly/s
 type Options = saasassembly.Options
 type Server = saasassembly.Server
 
-func New(options Options) *Server { return saasassembly.New(options) }
+func New(options Options) (*Server, error) { return saasassembly.New(options) }

@@ -22,7 +22,11 @@ func main() {
 	if token == "" {
 		log.Fatal("DOMAINRY_MONITORING_TOKEN is required")
 	}
-	server := &http.Server{Addr: address, Handler: monitoringsaas.New(monitoringsaas.Options{BearerToken: token}).Routes(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	handler, err := monitoringsaas.New(monitoringsaas.Options{BearerToken: token})
+	if err != nil {
+		log.Fatal(err)
+	}
+	server := &http.Server{Addr: address, Handler: handler.Routes(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
 	lifecycle, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go func() {
