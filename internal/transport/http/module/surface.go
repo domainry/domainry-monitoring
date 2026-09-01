@@ -3,6 +3,7 @@ package module
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/domainry/domainry-foundation/modulehttp"
@@ -10,52 +11,68 @@ import (
 )
 
 type surface struct {
-	binding monitoringsdk.Binding
+	binding    monitoringsdk.Binding
+	mux        *http.ServeMux
+	routes     []modulehttp.Route
+	operations map[string]map[string]any
 }
 
 func (*surface) ContractVersion() string { return modulehttp.ContractVersion }
 func (*surface) Owner() string           { return monitoringsdk.MonitoringHTTPSurfaceContract().Owner }
 func (*surface) Name() string            { return monitoringsdk.MonitoringHTTPSurfaceContract().Name }
-func (*surface) Routes() []modulehttp.Route {
-	return monitoringRoutes()
+func (s *surface) Routes() []modulehttp.Route {
+	return append([]modulehttp.Route(nil), s.routes...)
 }
-func monitoringRoutes() []modulehttp.Route {
+func monitoringRoutes() ([]modulehttp.Route, error) {
 	contract := monitoringsdk.MonitoringHTTPSurfaceContract()
 	routes := make([]modulehttp.Route, 0, len(contract.Routes))
-	for _, route := range contract.Routes {
-		exposures := make([]modulehttp.Exposure, len(route.Exposures))
-		for index, exposure := range route.Exposures {
-			exposures[index] = modulehttp.Exposure(exposure)
+	for _, declared := range contract.Routes {
+		route, err := modulehttp.RouteFromAction(declared.Action)
+		if err != nil {
+			return nil, fmt.Errorf("project Monitoring Action %q: %w", declared.Action.Key, err)
 		}
-		routes = append(routes, modulehttp.Route{
-			Pattern: route.Pattern, Exposures: exposures, Authentication: modulehttp.Authentication(route.Authentication),
-			Permission: route.Permission, AnyPermissions: append([]string(nil), route.AnyPermissions...), PrincipalOnly: route.PrincipalOnly,
-			Governance: &modulehttp.Governance{
-				EffectClass: modulehttp.EffectClass(route.EffectClass), HighRiskPolicy: modulehttp.HighRiskPolicy(route.HighRiskPolicy),
-				IdempotencyDecision: route.IdempotencyDecision, AuditClass: route.AuditClass,
-			},
-		})
+		routes = append(routes, route)
 	}
-	return routes
+	return routes, nil
 }
-func (*surface) OpenAPIOperations() map[string]map[string]any {
-	return monitoringOpenAPIOperations()
+func (s *surface) OpenAPIOperations() map[string]map[string]any {
+	return s.operations
 }
 func monitoringOpenAPIOperations() map[string]map[string]any {
-	return monitoringsdk.MonitoringHTTPSurfaceContract().OpenAPI
+	return monitoringsdk.MonitoringHTTPSurfaceContract().OpenAPIOperations()
 }
-func (s *surface) Handler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(s.binding.Metrics(r.Context()))
-	})
-}
+func (s *surface) Handler() http.Handler { return s.mux }
 
 func NewSurface(binding monitoringsdk.Binding) (modulehttp.Surface, error) {
 	if binding == nil {
 		return nil, errors.New("Monitoring binding is unavailable")
 	}
-	return &surface{binding: binding}, nil
+	routes, err := monitoringRoutes()
+	if err != nil {
+		return nil, err
+	}
+	s := &surface{binding: binding, mux: http.NewServeMux(), routes: routes, operations: monitoringOpenAPIOperations()}
+	handlers := map[string]http.HandlerFunc{monitoringsdk.ActionMonitoringMetricsRead: s.metrics}
+	for _, route := range routes {
+		handler, found := handlers[route.Action.Key]
+		if !found {
+			return nil, fmt.Errorf("Monitoring Action %q has no HTTP handler", route.Action.Key)
+		}
+		if _, found := s.operations[route.Pattern()]; !found {
+			return nil, fmt.Errorf("Monitoring Action %q has no OpenAPI operation", route.Action.Key)
+		}
+		s.mux.HandleFunc(route.Pattern(), handler)
+		delete(handlers, route.Action.Key)
+	}
+	if len(handlers) != 0 || len(s.operations) != len(routes) {
+		return nil, errors.New("Monitoring handler, Action, and OpenAPI inventories differ")
+	}
+	return s, nil
+}
+
+func (s *surface) metrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(s.binding.Metrics(r.Context()))
 }
 
 var _ modulehttp.Surface = (*surface)(nil)

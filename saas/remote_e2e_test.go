@@ -87,7 +87,7 @@ func TestRemoteBindingUsesSaaSEvaluator(t *testing.T) {
 	}
 	contracttest.VerifyBinding(t, binding)
 	provider, ok := binding.(modulehttp.Provider)
-	if !ok || len(provider.HTTPSurfaces()) != 1 || provider.HTTPSurfaces()[0].Routes()[0].Pattern != "GET /operations/monitoring/metrics" {
+	if !ok || len(provider.HTTPSurfaces()) != 1 || provider.HTTPSurfaces()[0].Routes()[0].Pattern() != "GET /operations/monitoring/metrics" {
 		t.Fatalf("SaaS Monitoring HTTP surfaces=%v", provider)
 	}
 	if health := binding.Health(t.Context()); health["status"] != "ok" || health["runtime_id"] != "runtime-1" {

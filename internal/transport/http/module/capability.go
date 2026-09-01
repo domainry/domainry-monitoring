@@ -15,13 +15,17 @@ const monitoringOperationsCategory = "monitoring.operations"
 // discloses no validation scopes; the common method remains available and
 // rejects any invented kind as outside the owner contract.
 func NewCapabilityBinding() (*modulecapability.StaticBinding, error) {
+	routes, err := monitoringRoutes()
+	if err != nil {
+		return nil, err
+	}
 	document, err := modulecapability.CategoryFromHTTPRoutes(modulecapability.HTTPRouteCategory{
 		Owner: "monitoring",
 		Category: modulecapability.CategorySummary{
 			Key: monitoringOperationsCategory, Name: "Runtime monitoring", Description: "Read Monitoring-owned aggregated Runtime operational metrics.",
 			AssemblyChains: []string{"runtime_observations_to_monitoring_snapshot"}, ValidationScopes: []string{},
 		},
-		Routes: monitoringRoutes(), Operations: monitoringOpenAPIOperations(),
+		Routes: routes, Operations: monitoringOpenAPIOperations(),
 		Components: map[string]map[string]json.RawMessage{
 			"securitySchemes": {"BearerAuth": json.RawMessage(`{"type":"http","scheme":"bearer","bearerFormat":"JWT"}`)},
 		},
