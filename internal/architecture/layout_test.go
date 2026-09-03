@@ -101,3 +101,21 @@ func TestMonitoringUsesTaggedDependencies(t *testing.T) {
 		t.Fatal("Monitoring must consume released module tags, not local directory replacements")
 	}
 }
+
+func TestMonitoringOwnsNoPersistenceOrMigrations(t *testing.T) {
+	root := repositoryRoot(t)
+	for _, forbidden := range []string{
+		"internal/infrastructure", "internal/persistence", "internal/repository", "internal/migration", "migrations",
+	} {
+		if _, err := os.Stat(filepath.Join(root, forbidden)); !os.IsNotExist(err) {
+			t.Errorf("Monitoring must not own persistence boundary %q", forbidden)
+		}
+	}
+	content, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(content), "domainry-orm") {
+		t.Fatal("Monitoring must not depend on domainry-orm without source-owned durable state")
+	}
+}

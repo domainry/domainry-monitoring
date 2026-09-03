@@ -12,6 +12,12 @@ monitoringmodule.NewFactory(monitoringmodule.OptionsFromEnvironment())
 
 Aggregation runs inside the Runtime process and borrows host observation ports.
 
+The product route `GET /operations/monitoring/metrics` requires the exact
+`monitoring.metrics.read` Permission and its same-resource/action data policy.
+Because the response is one whole-Runtime aggregate without owner or
+organization record facts, only the canonical `all` data scope is accepted;
+`owner`, `org`, `org_child`, and `target_org` fail closed.
+
 ## SaaS mode
 
 Run the service with:

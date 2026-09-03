@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/domainry/domainry-foundation/modulehttp"
+	identitysdk "github.com/domainry/domainry-identity-sdk"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 )
 
@@ -71,8 +73,25 @@ func NewSurface(binding monitoringsdk.Binding) (modulehttp.Surface, error) {
 }
 
 func (s *surface) metrics(w http.ResponseWriter, r *http.Request) {
+	principal, ok := identitysdk.PrincipalFromContext(r.Context())
+	if !ok {
+		writeModuleError(w, http.StatusUnauthorized, "backend.monitoring.authentication_required")
+		return
+	}
+	if !hasUnrestrictedPermission(principal, monitoringsdk.ActionMonitoringMetricsRead, time.Now()) {
+		writeModuleError(w, http.StatusForbidden, "backend.monitoring.metrics_scope_denied")
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(s.binding.Metrics(r.Context()))
+}
+
+func writeModuleError(w http.ResponseWriter, status int, code string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"code": code})
 }
 
 var _ modulehttp.Surface = (*surface)(nil)
