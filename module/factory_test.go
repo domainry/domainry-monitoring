@@ -66,10 +66,10 @@ func TestModuleAggregatesHealthAndMetrics(t *testing.T) {
 		t.Fatalf("metrics=%#v", metrics)
 	}
 	provider, ok := binding.(modulehttp.Provider)
-	if !ok || len(provider.HTTPSurfaces()) != 1 {
-		t.Fatalf("Monitoring HTTP surfaces=%v", provider)
+	if !ok || len(provider.HTTPAdapters()) != 1 {
+		t.Fatalf("Monitoring HTTP adapters=%v", provider)
 	}
-	if err := modulehttp.ValidateSurface(provider.HTTPSurfaces()[0]); err != nil {
+	if err := modulehttp.ValidateAdapter(provider.HTTPAdapters()[0]); err != nil {
 		t.Fatal(err)
 	}
 }

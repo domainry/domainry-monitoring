@@ -19,7 +19,7 @@ func TestHandlerEvaluatesAuthenticatedHealth(t *testing.T) {
 	handler := server.Routes()
 	input := contract.HealthRequest{RuntimeID: "runtime-1", Identity: contract.Identity{TemplateID: "template"}, Storage: contract.ComponentObservation{Payload: map[string]any{"ping": "ok"}}, Migration: contract.MigrationObservation{Current: true, Payload: map[string]any{"current": true}}, Scheduler: contract.ComponentObservation{Payload: map[string]any{"runtime_available": true}}, Lifecycle: contract.ComponentObservation{Payload: map[string]any{}}}
 	body, _ := json.Marshal(input)
-	request := httptest.NewRequest(stdhttp.MethodPost, "/v1/health", bytes.NewReader(body))
+	request := httptest.NewRequest(stdhttp.MethodPost, "/monitoring/v1/health", bytes.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
@@ -39,7 +39,7 @@ func TestHandlerRejectsUnauthorizedAndInvalidRequests(t *testing.T) {
 	}
 	handler := server.Routes()
 	unauthorized := httptest.NewRecorder()
-	handler.ServeHTTP(unauthorized, httptest.NewRequest(stdhttp.MethodGet, "/v1/descriptor", nil))
+	handler.ServeHTTP(unauthorized, httptest.NewRequest(stdhttp.MethodGet, "/monitoring/v1/descriptor", nil))
 	if unauthorized.Code != stdhttp.StatusUnauthorized {
 		t.Fatalf("status=%d", unauthorized.Code)
 	}
@@ -49,7 +49,7 @@ func TestHandlerRejectsUnauthorizedAndInvalidRequests(t *testing.T) {
 		t.Fatalf("capability status=%d", capabilityUnauthorized.Code)
 	}
 	invalid := httptest.NewRecorder()
-	request := httptest.NewRequest(stdhttp.MethodPost, "/v1/metrics", bytes.NewBufferString(`{"unknown":true}`))
+	request := httptest.NewRequest(stdhttp.MethodPost, "/monitoring/v1/metrics", bytes.NewBufferString(`{"unknown":true}`))
 	request.Header.Set("Authorization", "Bearer secret")
 	handler.ServeHTTP(invalid, request)
 	if invalid.Code != stdhttp.StatusBadRequest {

@@ -50,9 +50,9 @@ func (s *Handler) register() {
 	s.mux.HandleFunc("GET /ready", func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
 		writeJSON(w, stdhttp.StatusOK, map[string]string{"status": "ok"})
 	})
-	s.mux.HandleFunc("GET /v1/descriptor", s.auth(s.descriptor))
-	s.mux.HandleFunc("POST /v1/health", s.auth(s.health))
-	s.mux.HandleFunc("POST /v1/metrics", s.auth(s.metrics))
+	s.mux.HandleFunc("GET /monitoring/v1/descriptor", s.auth(s.descriptor))
+	s.mux.HandleFunc("POST /monitoring/v1/health", s.auth(s.health))
+	s.mux.HandleFunc("POST /monitoring/v1/metrics", s.auth(s.metrics))
 }
 
 func (s *Handler) auth(next stdhttp.HandlerFunc) stdhttp.HandlerFunc {

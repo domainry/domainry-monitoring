@@ -13,25 +13,25 @@ import (
 )
 
 func TestSurfaceUsesMonitoringSDKHTTPContract(t *testing.T) {
-	contract := monitoringsdk.MonitoringHTTPSurfaceContract()
+	contract := monitoringsdk.MonitoringHTTPAdapterContract()
 	routes, err := monitoringRoutes()
 	if err != nil {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(routes[0].Pattern(), func(http.ResponseWriter, *http.Request) {})
-	surface := &surface{mux: mux, routes: routes, operations: monitoringOpenAPIOperations()}
-	if surface.Owner() != contract.Owner || surface.Name() != contract.Name {
-		t.Fatalf("surface identity=%s/%s contract=%s/%s", surface.Owner(), surface.Name(), contract.Owner, contract.Name)
+	adapter := &adapter{mux: mux, routes: routes, operations: monitoringOpenAPIOperations()}
+	if adapter.Owner() != contract.Owner || adapter.Name() != contract.Name {
+		t.Fatalf("adapter identity=%s/%s contract=%s/%s", adapter.Owner(), adapter.Name(), contract.Owner, contract.Name)
 	}
-	routes = surface.Routes()
+	routes = adapter.Routes()
 	if len(routes) != 1 || routes[0].Pattern() != contract.Routes[0].Pattern() || routes[0].Action.Permission == nil || routes[0].Action.Permission.Key != "monitoring.metrics.read" {
-		t.Fatalf("surface routes=%#v", routes)
+		t.Fatalf("adapter routes=%#v", routes)
 	}
-	if surface.OpenAPIOperations()[routes[0].Pattern()]["operationId"] != "getMonitoringMetrics" {
-		t.Fatalf("surface OpenAPI=%#v", surface.OpenAPIOperations())
+	if adapter.OpenAPIOperations()[routes[0].Pattern()]["operationId"] != "getMonitoringMetrics" {
+		t.Fatalf("adapter OpenAPI=%#v", adapter.OpenAPIOperations())
 	}
-	if err := modulehttp.ValidateSurface(surface); err != nil {
+	if err := modulehttp.ValidateAdapter(adapter); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -48,13 +48,13 @@ func (binding *metricsBindingStub) Metrics(context.Context) map[string]any {
 
 func TestSurfaceEnforcesUnrestrictedMetricsScopeAtOwningHandler(t *testing.T) {
 	binding := &metricsBindingStub{}
-	surface, err := NewSurface(binding)
+	adapter, err := NewAdapter(binding)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	unauthenticated := httptest.NewRecorder()
-	surface.Handler().ServeHTTP(unauthenticated, httptest.NewRequest(http.MethodGet, "/operations/monitoring/metrics", nil))
+	adapter.Handler().ServeHTTP(unauthenticated, httptest.NewRequest(http.MethodGet, "/monitoring/metrics", nil))
 	if unauthenticated.Code != http.StatusUnauthorized || binding.calls != 0 {
 		t.Fatalf("unauthenticated status=%d calls=%d", unauthenticated.Code, binding.calls)
 	}
@@ -71,9 +71,9 @@ func TestSurfaceEnforcesUnrestrictedMetricsScopeAtOwningHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			principal := metricsPrincipal(now, monitoringsdk.ActionMonitoringMetricsRead, monitoringsdk.ActionMonitoringMetricsRead, test.scope)
 			ctx := identitysdk.WithRequestIdentity(t.Context(), identitysdk.RequestIdentity{Principal: principal})
-			request := httptest.NewRequest(http.MethodGet, "/operations/monitoring/metrics", nil).WithContext(ctx)
+			request := httptest.NewRequest(http.MethodGet, "/monitoring/metrics", nil).WithContext(ctx)
 			response := httptest.NewRecorder()
-			surface.Handler().ServeHTTP(response, request)
+			adapter.Handler().ServeHTTP(response, request)
 			if response.Code != test.want {
 				t.Fatalf("status=%d want=%d body=%s", response.Code, test.want, response.Body.String())
 			}

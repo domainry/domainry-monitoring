@@ -115,7 +115,27 @@ func TestMonitoringOwnsNoPersistenceOrMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(content), "domainry-orm") {
-		t.Fatal("Monitoring must not depend on domainry-orm without source-owned durable state")
+	for _, line := range strings.Split(string(content), "\n") {
+		if strings.Contains(line, "github.com/domainry/domainry-orm") && !strings.Contains(line, "// indirect") {
+			t.Fatal("Monitoring must not directly depend on domainry-orm without source-owned durable state")
+		}
+	}
+	command := exec.Command("go", "list", "-f", `{{.ImportPath}} {{join .Imports " "}}`, "./...")
+	command.Dir = root
+	command.Env = append(os.Environ(), "GOWORK=off")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("inspect Monitoring production imports: %v: %s", err, output)
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		for _, imported := range fields[1:] {
+			if imported == "github.com/domainry/domainry-orm" || strings.HasPrefix(imported, "github.com/domainry/domainry-orm/") {
+				t.Fatalf("Monitoring production package %s directly imports persistence dependency %s", fields[0], imported)
+			}
+		}
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/domainry/domainry-foundation/modulecapability/contracttest"
 )
 
-func TestMonitoringCapabilityTracksSourceOwnedSurface(t *testing.T) {
+func TestMonitoringCapabilityTracksSourceOwnedAdapter(t *testing.T) {
 	binding, err := NewCapabilityBinding()
 	if err != nil {
 		t.Fatal(err)

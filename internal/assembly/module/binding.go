@@ -13,7 +13,7 @@ import (
 type binding struct {
 	runtimeID  string
 	host       modulehost.Host
-	surfaces   []modulehttp.Surface
+	adapters   []modulehttp.Adapter
 	capability modulecapability.Binding
 }
 
@@ -47,8 +47,8 @@ func (b *binding) MigrationTelemetry(ctx context.Context) (int, bool, error) {
 	return b.host.Migration().Telemetry(ctx)
 }
 func (*binding) Close(context.Context) error { return nil }
-func (b *binding) HTTPSurfaces() []modulehttp.Surface {
-	return append([]modulehttp.Surface(nil), b.surfaces...)
+func (b *binding) HTTPAdapters() []modulehttp.Adapter {
+	return append([]modulehttp.Adapter(nil), b.adapters...)
 }
 
 var _ monitoringsdk.Binding = (*binding)(nil)

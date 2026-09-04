@@ -2,6 +2,8 @@ package saas_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -87,8 +89,8 @@ func TestRemoteBindingUsesSaaSEvaluator(t *testing.T) {
 	}
 	contracttest.VerifyBinding(t, binding)
 	provider, ok := binding.(modulehttp.Provider)
-	if !ok || len(provider.HTTPSurfaces()) != 1 || provider.HTTPSurfaces()[0].Routes()[0].Pattern() != "GET /operations/monitoring/metrics" {
-		t.Fatalf("SaaS Monitoring HTTP surfaces=%v", provider)
+	if !ok || len(provider.HTTPAdapters()) != 1 || provider.HTTPAdapters()[0].Routes()[0].Pattern() != "GET /monitoring/metrics" {
+		t.Fatalf("SaaS Monitoring HTTP adapters=%v", provider)
 	}
 	if health := binding.Health(t.Context()); health["status"] != "ok" || health["runtime_id"] != "runtime-1" {
 		t.Fatalf("health=%#v", health)
@@ -151,8 +153,41 @@ func TestModuleAndSaaSTopologiesProduceEquivalentSnapshots(t *testing.T) {
 		}
 		assertCanonicalCapabilityEqual(t, directDocument, remoteDocument)
 	}
-	if _, err := remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "secret", Client: service.Client(), CapabilityContractSHA256: strings.Repeat("0", 64)}).OpenSaaS(t.Context(), application, remoteHost{}); err == nil {
-		t.Fatal("Monitoring Remote accepted a stale capability digest")
+	validationRequest := modulecapability.ValidationRequest{
+		ContractVersion: modulecapability.ValidationContractVersion,
+		ModuleKey:       directSummary.Identity.Key,
+		CategoryKey:     directSummary.Categories[0].Key,
+		ContractSHA256:  directSummary.Identity.ContractSHA256,
+		Kind:            "monitoring.configuration",
+		Candidate: modulecapability.AuthoringFragment{
+			Collection: "monitoring",
+			Key:        "candidate",
+			Value:      json.RawMessage(`{}`),
+		},
+	}
+	t.Run("validation scope", func(t *testing.T) {
+		assertCapabilityValidationParity(t, moduleBinding, remoteBinding, validationRequest)
+	})
+	t.Run("validation digest", func(t *testing.T) {
+		validationRequest.ContractSHA256 = strings.Repeat("0", 64)
+		assertCapabilityValidationParity(t, moduleBinding, remoteBinding, validationRequest)
+	})
+	if _, err := remote.NewFactory(remote.Config{Endpoint: service.URL, Token: "secret", Client: service.Client(), CapabilityContractSHA256: strings.Repeat("0", 64)}).OpenSaaS(t.Context(), application, remoteHost{}); err == nil || !strings.Contains(err.Error(), "module_capability.contract_mismatch") {
+		t.Fatalf("Monitoring Remote capability digest error=%v", err)
+	}
+}
+
+func assertCapabilityValidationParity(t *testing.T, direct, remote monitoringsdk.Binding, request modulecapability.ValidationRequest) {
+	t.Helper()
+	directResult, directErr := direct.ValidateCapabilityCandidate(t.Context(), request)
+	remoteResult, remoteErr := remote.ValidateCapabilityCandidate(t.Context(), request)
+	assertCanonicalCapabilityEqual(t, directResult, remoteResult)
+	var directCapabilityErr, remoteCapabilityErr *modulecapability.Error
+	if !errors.As(directErr, &directCapabilityErr) || !errors.As(remoteErr, &remoteCapabilityErr) {
+		t.Fatalf("validation errors are not capability errors: direct=%v remote=%v", directErr, remoteErr)
+	}
+	if directCapabilityErr.StatusCode != remoteCapabilityErr.StatusCode || directCapabilityErr.Code != remoteCapabilityErr.Code || directCapabilityErr.Message != remoteCapabilityErr.Message {
+		t.Fatalf("validation errors differ: direct=%+v remote=%+v", directCapabilityErr, remoteCapabilityErr)
 	}
 }
 

@@ -35,11 +35,11 @@ func (*Factory) OpenModule(_ context.Context, application monitoringsdk.Applicat
 		return nil, fmt.Errorf("build Monitoring capability disclosure: %w", err)
 	}
 	result := &binding{runtimeID: application.RuntimeID, host: host, capability: capability}
-	surface, err := monitoringhttp.NewSurface(result)
+	adapter, err := monitoringhttp.NewAdapter(result)
 	if err != nil {
 		return nil, err
 	}
-	result.surfaces = []modulehttp.Surface{surface}
+	result.adapters = []modulehttp.Adapter{adapter}
 	return result, nil
 }
 

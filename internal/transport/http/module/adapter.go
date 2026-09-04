@@ -12,21 +12,21 @@ import (
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 )
 
-type surface struct {
+type adapter struct {
 	binding    monitoringsdk.Binding
 	mux        *http.ServeMux
 	routes     []modulehttp.Route
 	operations map[string]map[string]any
 }
 
-func (*surface) ContractVersion() string { return modulehttp.ContractVersion }
-func (*surface) Owner() string           { return monitoringsdk.MonitoringHTTPSurfaceContract().Owner }
-func (*surface) Name() string            { return monitoringsdk.MonitoringHTTPSurfaceContract().Name }
-func (s *surface) Routes() []modulehttp.Route {
+func (*adapter) ContractVersion() string { return modulehttp.ContractVersion }
+func (*adapter) Owner() string           { return monitoringsdk.MonitoringHTTPAdapterContract().Owner }
+func (*adapter) Name() string            { return monitoringsdk.MonitoringHTTPAdapterContract().Name }
+func (s *adapter) Routes() []modulehttp.Route {
 	return append([]modulehttp.Route(nil), s.routes...)
 }
 func monitoringRoutes() ([]modulehttp.Route, error) {
-	contract := monitoringsdk.MonitoringHTTPSurfaceContract()
+	contract := monitoringsdk.MonitoringHTTPAdapterContract()
 	routes := make([]modulehttp.Route, 0, len(contract.Routes))
 	for _, declared := range contract.Routes {
 		route, err := modulehttp.RouteFromAction(declared.Action)
@@ -37,15 +37,15 @@ func monitoringRoutes() ([]modulehttp.Route, error) {
 	}
 	return routes, nil
 }
-func (s *surface) OpenAPIOperations() map[string]map[string]any {
+func (s *adapter) OpenAPIOperations() map[string]map[string]any {
 	return s.operations
 }
 func monitoringOpenAPIOperations() map[string]map[string]any {
-	return monitoringsdk.MonitoringHTTPSurfaceContract().OpenAPIOperations()
+	return monitoringsdk.MonitoringHTTPAdapterContract().OpenAPIOperations()
 }
-func (s *surface) Handler() http.Handler { return s.mux }
+func (s *adapter) Handler() http.Handler { return s.mux }
 
-func NewSurface(binding monitoringsdk.Binding) (modulehttp.Surface, error) {
+func NewAdapter(binding monitoringsdk.Binding) (modulehttp.Adapter, error) {
 	if binding == nil {
 		return nil, errors.New("Monitoring binding is unavailable")
 	}
@@ -53,7 +53,7 @@ func NewSurface(binding monitoringsdk.Binding) (modulehttp.Surface, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &surface{binding: binding, mux: http.NewServeMux(), routes: routes, operations: monitoringOpenAPIOperations()}
+	s := &adapter{binding: binding, mux: http.NewServeMux(), routes: routes, operations: monitoringOpenAPIOperations()}
 	handlers := map[string]http.HandlerFunc{monitoringsdk.ActionMonitoringMetricsRead: s.metrics}
 	for _, route := range routes {
 		handler, found := handlers[route.Action.Key]
@@ -72,7 +72,7 @@ func NewSurface(binding monitoringsdk.Binding) (modulehttp.Surface, error) {
 	return s, nil
 }
 
-func (s *surface) metrics(w http.ResponseWriter, r *http.Request) {
+func (s *adapter) metrics(w http.ResponseWriter, r *http.Request) {
 	principal, ok := identitysdk.PrincipalFromContext(r.Context())
 	if !ok {
 		writeModuleError(w, http.StatusUnauthorized, "backend.monitoring.authentication_required")
@@ -94,5 +94,5 @@ func writeModuleError(w http.ResponseWriter, status int, code string) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"code": code})
 }
 
-var _ modulehttp.Surface = (*surface)(nil)
-var _ modulehttp.OpenAPIProvider = (*surface)(nil)
+var _ modulehttp.Adapter = (*adapter)(nil)
+var _ modulehttp.OpenAPIProvider = (*adapter)(nil)

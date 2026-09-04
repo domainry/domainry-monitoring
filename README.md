@@ -12,7 +12,7 @@ monitoringmodule.NewFactory(monitoringmodule.OptionsFromEnvironment())
 
 Aggregation runs inside the Runtime process and borrows host observation ports.
 
-The product route `GET /operations/monitoring/metrics` requires the exact
+The product route `GET /monitoring/metrics` requires the exact
 `monitoring.metrics.read` Permission and its same-resource/action data policy.
 Because the response is one whole-Runtime aggregate without owner or
 organization record facts, only the canonical `all` data scope is accepted;
@@ -31,9 +31,9 @@ Generated Runtime composition supplies `monitoringremote.NewFactory(monitoringre
 Service endpoints:
 
 - `GET /live`, `GET /ready`
-- `GET /v1/descriptor`
-- `POST /v1/health`
-- `POST /v1/metrics`
+- `GET /monitoring/v1/descriptor`
+- `POST /monitoring/v1/health`
+- `POST /monitoring/v1/metrics`
 
 The versioned API requires a bearer token. TLS is expected to terminate at the deployment ingress or service mesh.
 

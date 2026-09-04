@@ -26,7 +26,7 @@ func (f *Factory) Open(ctx context.Context, application monitoringsdk.Applicatio
 		return nil, fmt.Errorf("Monitoring SaaS Remote Factory is required")
 	}
 	binding, err := f.remote.Open(ctx, application)
-	return withHTTPSurface(binding, err)
+	return withHTTPAdapter(binding, err)
 }
 
 func (f *Factory) OpenSaaS(ctx context.Context, application monitoringsdk.ApplicationRef, host modulehost.Host) (monitoringsdk.Binding, error) {
@@ -35,30 +35,30 @@ func (f *Factory) OpenSaaS(ctx context.Context, application monitoringsdk.Applic
 		return nil, fmt.Errorf("Monitoring SaaS Remote Factory does not implement saashost.Factory")
 	}
 	binding, err := remote.OpenSaaS(ctx, application, host)
-	return withHTTPSurface(binding, err)
+	return withHTTPAdapter(binding, err)
 }
 
-func withHTTPSurface(binding monitoringsdk.Binding, err error) (monitoringsdk.Binding, error) {
+func withHTTPAdapter(binding monitoringsdk.Binding, err error) (monitoringsdk.Binding, error) {
 	if err != nil {
 		return nil, err
 	}
-	surface, err := monitoringhttp.NewSurface(binding)
+	adapter, err := monitoringhttp.NewAdapter(binding)
 	if err != nil {
 		_ = binding.Close(context.Background())
 		return nil, err
 	}
-	return &bindingWithHTTPSurface{Binding: binding, surfaces: []modulehttp.Surface{surface}}, nil
+	return &bindingWithHTTPAdapter{Binding: binding, adapters: []modulehttp.Adapter{adapter}}, nil
 }
 
-type bindingWithHTTPSurface struct {
+type bindingWithHTTPAdapter struct {
 	monitoringsdk.Binding
-	surfaces []modulehttp.Surface
+	adapters []modulehttp.Adapter
 }
 
-func (b *bindingWithHTTPSurface) HTTPSurfaces() []modulehttp.Surface {
-	return append([]modulehttp.Surface(nil), b.surfaces...)
+func (b *bindingWithHTTPAdapter) HTTPAdapters() []modulehttp.Adapter {
+	return append([]modulehttp.Adapter(nil), b.adapters...)
 }
 
 var _ monitoringsdk.Factory = (*Factory)(nil)
 var _ saashost.Factory = (*Factory)(nil)
-var _ modulehttp.Provider = (*bindingWithHTTPSurface)(nil)
+var _ modulehttp.Provider = (*bindingWithHTTPAdapter)(nil)
