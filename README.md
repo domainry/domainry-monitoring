@@ -1,5 +1,7 @@
 # Domainry Monitoring
 
+Product Agent disclosure index: [`capability/agent/index.json`](capability/agent/index.json). It intentionally contains no leaf guides because Runtime composes health, readiness, metrics, and migration telemetry automatically; these operations-owned capabilities must not enter product modeling context.
+
 Domainry Monitoring aggregates Runtime owner observations into consistent health and metric snapshots.
 
 ## Module mode
