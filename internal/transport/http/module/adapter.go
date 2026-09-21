@@ -37,11 +37,23 @@ func monitoringRoutes() ([]modulehttp.Route, error) {
 	}
 	return routes, nil
 }
+
+// CapabilityRoutes returns the immutable source-owned route manifest used by
+// the public capability contract.
+func CapabilityRoutes() ([]modulehttp.Route, error) {
+	return monitoringRoutes()
+}
 func (s *adapter) OpenAPIOperations() map[string]map[string]any {
 	return s.operations
 }
 func monitoringOpenAPIOperations() map[string]map[string]any {
 	return monitoringsdk.MonitoringHTTPAdapterContract().OpenAPIOperations()
+}
+
+// CapabilityOpenAPIOperations returns the source-owned OpenAPI facts consumed
+// by the public capability contract.
+func CapabilityOpenAPIOperations() map[string]map[string]any {
+	return monitoringOpenAPIOperations()
 }
 func (s *adapter) Handler() http.Handler { return s.mux }
 

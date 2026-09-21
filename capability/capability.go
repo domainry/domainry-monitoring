@@ -4,11 +4,10 @@ package capability
 
 import (
 	"github.com/domainry/domainry-foundation/modulecapability"
-	monitoringhttp "github.com/domainry/domainry-monitoring/internal/transport/http/module"
 )
 
 type Inputs struct{}
 
-func Open(Inputs) (*modulecapability.StaticBinding, error) {
-	return monitoringhttp.NewCapabilityBinding()
+func Open(inputs Inputs) (*modulecapability.StaticBinding, error) {
+	return openContract(inputs)
 }
