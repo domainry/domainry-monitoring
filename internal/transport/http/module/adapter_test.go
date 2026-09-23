@@ -20,16 +20,13 @@ func TestSurfaceUsesMonitoringSDKHTTPContract(t *testing.T) {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(routes[0].Pattern(), func(http.ResponseWriter, *http.Request) {})
-	adapter := &adapter{mux: mux, routes: routes, operations: monitoringOpenAPIOperations()}
+	adapter := &adapter{mux: mux, routes: routes}
 	if adapter.Owner() != contract.Owner || adapter.Name() != contract.Name {
 		t.Fatalf("adapter identity=%s/%s contract=%s/%s", adapter.Owner(), adapter.Name(), contract.Owner, contract.Name)
 	}
 	routes = adapter.Routes()
 	if len(routes) != 1 || routes[0].Pattern() != contract.Routes[0].Pattern() || routes[0].Action.Permission == nil || routes[0].Action.Permission.Key != "monitoring.metrics.read" {
 		t.Fatalf("adapter routes=%#v", routes)
-	}
-	if adapter.OpenAPIOperations()[routes[0].Pattern()]["operationId"] != "getMonitoringMetrics" {
-		t.Fatalf("adapter OpenAPI=%#v", adapter.OpenAPIOperations())
 	}
 	if err := modulehttp.ValidateAdapter(adapter); err != nil {
 		t.Fatal(err)

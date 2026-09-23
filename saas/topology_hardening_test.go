@@ -170,7 +170,6 @@ func TestRemoteBindingMapsServiceFailureAndTimeout(t *testing.T) {
 	client.Transport = failingObservationTransport{base: client.Transport}
 	binding, err := remote.NewFactory(remote.Config{
 		Endpoint: service.URL, Token: "secret", Client: client, Timeout: 20 * time.Millisecond,
-		CapabilityContractSHA256: monitoringCapabilitySHA256(t),
 	}).OpenSaaS(t.Context(), monitoringsdk.ApplicationRef{RuntimeID: "runtime-1"}, remoteHost{})
 	if err != nil {
 		t.Fatal(err)
@@ -252,12 +251,8 @@ func openTopologies(t *testing.T, host modulehost.Host, decorateRemote bool) (mo
 	}
 	service := httptest.NewServer(handler.Routes())
 	t.Cleanup(service.Close)
-	summary, err := moduleBinding.CapabilitySummary(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
 	var factory monitoringsdk.Factory = remote.NewFactory(remote.Config{
-		Endpoint: service.URL, Token: "secret", Client: service.Client(), CapabilityContractSHA256: summary.Identity.ContractSHA256,
+		Endpoint: service.URL, Token: "secret", Client: service.Client(),
 	})
 	if decorateRemote {
 		factory = monitoringmodule.NewSaaSFactory(factory)

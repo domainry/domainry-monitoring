@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/domainry/domainry-foundation/modulecapability"
 	"github.com/domainry/domainry-monitoring-sdk/contract"
 )
 
@@ -42,11 +41,6 @@ func TestHandlerRejectsUnauthorizedAndInvalidRequests(t *testing.T) {
 	handler.ServeHTTP(unauthorized, httptest.NewRequest(stdhttp.MethodGet, "/monitoring/v1/descriptor", nil))
 	if unauthorized.Code != stdhttp.StatusUnauthorized {
 		t.Fatalf("status=%d", unauthorized.Code)
-	}
-	capabilityUnauthorized := httptest.NewRecorder()
-	handler.ServeHTTP(capabilityUnauthorized, httptest.NewRequest(stdhttp.MethodGet, modulecapability.SummaryPath, nil))
-	if capabilityUnauthorized.Code != stdhttp.StatusUnauthorized {
-		t.Fatalf("capability status=%d", capabilityUnauthorized.Code)
 	}
 	invalid := httptest.NewRecorder()
 	request := httptest.NewRequest(stdhttp.MethodPost, "/monitoring/v1/metrics", bytes.NewBufferString(`{"unknown":true}`))

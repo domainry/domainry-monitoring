@@ -3,7 +3,6 @@ package module
 import (
 	"context"
 
-	"github.com/domainry/domainry-foundation/modulecapability"
 	"github.com/domainry/domainry-foundation/modulehttp"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
@@ -11,20 +10,9 @@ import (
 )
 
 type binding struct {
-	runtimeID  string
-	host       modulehost.Host
-	adapters   []modulehttp.Adapter
-	capability modulecapability.Binding
-}
-
-func (b *binding) CapabilitySummary(ctx context.Context) (modulecapability.ModuleSummary, error) {
-	return b.capability.CapabilitySummary(ctx)
-}
-func (b *binding) CapabilityCategory(ctx context.Context, key string) (modulecapability.CategoryDocument, error) {
-	return b.capability.CapabilityCategory(ctx, key)
-}
-func (b *binding) ValidateCapabilityCandidate(ctx context.Context, request modulecapability.ValidationRequest) (modulecapability.ValidationResult, error) {
-	return b.capability.ValidateCapabilityCandidate(ctx, request)
+	runtimeID string
+	host      modulehost.Host
+	adapters  []modulehttp.Adapter
 }
 
 func (*binding) Descriptor() monitoringsdk.Descriptor {

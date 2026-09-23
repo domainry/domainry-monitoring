@@ -7,7 +7,6 @@ import (
 	"github.com/domainry/domainry-foundation/modulehttp"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
-	monitoringcapability "github.com/domainry/domainry-monitoring/capability"
 	monitoringhttp "github.com/domainry/domainry-monitoring/internal/transport/http/module"
 )
 
@@ -30,11 +29,7 @@ func (*Factory) OpenModule(_ context.Context, application monitoringsdk.Applicat
 	if host == nil || host.Storage() == nil || host.Migration() == nil || host.Scheduler() == nil || host.Lifecycle() == nil || host.Metrics() == nil {
 		return nil, fmt.Errorf("Monitoring host is incomplete")
 	}
-	capability, err := monitoringcapability.Open(monitoringcapability.Inputs{})
-	if err != nil {
-		return nil, fmt.Errorf("build Monitoring capability disclosure: %w", err)
-	}
-	result := &binding{runtimeID: application.RuntimeID, host: host, capability: capability}
+	result := &binding{runtimeID: application.RuntimeID, host: host}
 	adapter, err := monitoringhttp.NewAdapter(result)
 	if err != nil {
 		return nil, err

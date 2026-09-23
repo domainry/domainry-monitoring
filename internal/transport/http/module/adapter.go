@@ -13,10 +13,9 @@ import (
 )
 
 type adapter struct {
-	binding    monitoringsdk.Binding
-	mux        *http.ServeMux
-	routes     []modulehttp.Route
-	operations map[string]map[string]any
+	binding monitoringsdk.Binding
+	mux     *http.ServeMux
+	routes  []modulehttp.Route
 }
 
 func (*adapter) ContractVersion() string { return modulehttp.ContractVersion }
@@ -43,18 +42,6 @@ func monitoringRoutes() ([]modulehttp.Route, error) {
 func CapabilityRoutes() ([]modulehttp.Route, error) {
 	return monitoringRoutes()
 }
-func (s *adapter) OpenAPIOperations() map[string]map[string]any {
-	return s.operations
-}
-func monitoringOpenAPIOperations() map[string]map[string]any {
-	return monitoringsdk.MonitoringHTTPAdapterContract().OpenAPIOperations()
-}
-
-// CapabilityOpenAPIOperations returns the source-owned OpenAPI facts consumed
-// by the public capability contract.
-func CapabilityOpenAPIOperations() map[string]map[string]any {
-	return monitoringOpenAPIOperations()
-}
 func (s *adapter) Handler() http.Handler { return s.mux }
 
 func NewAdapter(binding monitoringsdk.Binding) (modulehttp.Adapter, error) {
@@ -65,21 +52,18 @@ func NewAdapter(binding monitoringsdk.Binding) (modulehttp.Adapter, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &adapter{binding: binding, mux: http.NewServeMux(), routes: routes, operations: monitoringOpenAPIOperations()}
+	s := &adapter{binding: binding, mux: http.NewServeMux(), routes: routes}
 	handlers := map[string]http.HandlerFunc{monitoringsdk.ActionMonitoringMetricsRead: s.metrics}
 	for _, route := range routes {
 		handler, found := handlers[route.Action.Key]
 		if !found {
 			return nil, fmt.Errorf("Monitoring Action %q has no HTTP handler", route.Action.Key)
 		}
-		if _, found := s.operations[route.Pattern()]; !found {
-			return nil, fmt.Errorf("Monitoring Action %q has no OpenAPI operation", route.Action.Key)
-		}
 		s.mux.HandleFunc(route.Pattern(), handler)
 		delete(handlers, route.Action.Key)
 	}
-	if len(handlers) != 0 || len(s.operations) != len(routes) {
-		return nil, errors.New("Monitoring handler, Action, and OpenAPI inventories differ")
+	if len(handlers) != 0 {
+		return nil, errors.New("Monitoring HTTP handler and Action route inventories differ")
 	}
 	return s, nil
 }
@@ -107,4 +91,3 @@ func writeModuleError(w http.ResponseWriter, status int, code string) {
 }
 
 var _ modulehttp.Adapter = (*adapter)(nil)
-var _ modulehttp.OpenAPIProvider = (*adapter)(nil)
