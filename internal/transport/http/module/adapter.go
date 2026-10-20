@@ -1,14 +1,13 @@
 package module
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/domainry/domainry-foundation/httpresponse"
 	"github.com/domainry/domainry-foundation/modulehttp"
-	"github.com/domainry/domainry-foundation/telemetry"
 	identitysdk "github.com/domainry/domainry-identity-sdk"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 )
@@ -72,24 +71,20 @@ func NewAdapter(binding monitoringsdk.Binding) (modulehttp.Adapter, error) {
 func (s *adapter) metrics(w http.ResponseWriter, r *http.Request) {
 	principal, ok := identitysdk.PrincipalFromContext(r.Context())
 	if !ok {
-		writeModuleError(w, http.StatusUnauthorized, "backend.monitoring.authentication_required")
+		writeModuleError(w, r, http.StatusUnauthorized, "backend.monitoring.authentication_required")
 		return
 	}
 	if !hasUnrestrictedPermission(principal, monitoringsdk.ActionMonitoringMetricsRead, time.Now()) {
-		writeModuleError(w, http.StatusForbidden, "backend.monitoring.metrics_scope_denied")
+		writeModuleError(w, r, http.StatusForbidden, "backend.monitoring.metrics_scope_denied")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	_ = json.NewEncoder(w).Encode(s.binding.Metrics(r.Context()))
+	httpresponse.WriteJSON(w, http.StatusOK, s.binding.Metrics(r.Context()))
 }
 
-func writeModuleError(w http.ResponseWriter, status int, code string) {
-	telemetry.RecordHTTPStatusError(w, status, code)
-	w.Header().Set("Content-Type", "application/json")
+func writeModuleError(w http.ResponseWriter, r *http.Request, status int, code string) {
 	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"code": code})
+	httpresponse.WriteError(w, r, httpresponse.Failure{Status: status, Code: code})
 }
 
 var _ modulehttp.Adapter = (*adapter)(nil)

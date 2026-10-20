@@ -7,6 +7,7 @@ import (
 	stdhttp "net/http"
 	"strings"
 
+	"github.com/domainry/domainry-foundation/httpresponse"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/contract"
 	monitoringapplication "github.com/domainry/domainry-monitoring/internal/application/monitoring"
@@ -45,7 +46,7 @@ func (s *Handler) register() {
 func (s *Handler) auth(next stdhttp.HandlerFunc) stdhttp.HandlerFunc {
 	return func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		if s.token != "" && r.Header.Get("Authorization") != "Bearer "+s.token {
-			writeJSON(w, stdhttp.StatusUnauthorized, map[string]any{"error": "monitoring.unauthorized"})
+			httpresponse.WriteError(w, r, httpresponse.Failure{Status: stdhttp.StatusUnauthorized, Code: "monitoring.unauthorized"})
 			return
 		}
 		next(w, r)
@@ -62,7 +63,7 @@ func (*Handler) health(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		return
 	}
 	if strings.TrimSpace(input.RuntimeID) == "" {
-		writeJSON(w, stdhttp.StatusBadRequest, map[string]any{"error": "monitoring.runtime_id_required"})
+		httpresponse.WriteError(w, r, httpresponse.Failure{Status: stdhttp.StatusBadRequest, Code: "monitoring.runtime_id_required"})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, monitoringapplication.EvaluateHealth(input))
@@ -74,7 +75,7 @@ func (*Handler) metrics(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		return
 	}
 	if strings.TrimSpace(input.RuntimeID) == "" {
-		writeJSON(w, stdhttp.StatusBadRequest, map[string]any{"error": "monitoring.runtime_id_required"})
+		httpresponse.WriteError(w, r, httpresponse.Failure{Status: stdhttp.StatusBadRequest, Code: "monitoring.runtime_id_required"})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, monitoringapplication.EvaluateMetrics(input))
@@ -85,18 +86,17 @@ func decodeJSON(w stdhttp.ResponseWriter, r *stdhttp.Request, target any) error 
 	decoder := json.NewDecoder(reader)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
-		writeJSON(w, stdhttp.StatusBadRequest, map[string]any{"error": "monitoring.request_invalid"})
+		httpresponse.WriteError(w, r, httpresponse.Failure{Status: stdhttp.StatusBadRequest, Code: "monitoring.request_invalid", Cause: err})
 		return err
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		writeJSON(w, stdhttp.StatusBadRequest, map[string]any{"error": "monitoring.request_invalid"})
-		return errors.New("multiple JSON values")
+		err = errors.New("multiple JSON values")
+		httpresponse.WriteError(w, r, httpresponse.Failure{Status: stdhttp.StatusBadRequest, Code: "monitoring.request_invalid", Cause: err})
+		return err
 	}
 	return nil
 }
 
 func writeJSON(w stdhttp.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
+	httpresponse.WriteJSON(w, status, value)
 }

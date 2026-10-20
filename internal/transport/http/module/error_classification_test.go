@@ -28,7 +28,7 @@ func TestMonitoringErrorClassificationMatrix(t *testing.T) {
 	}
 	for _, test := range tests {
 		capture := &classificationCapture{ResponseRecorder: httptest.NewRecorder()}
-		writeModuleError(capture, test.status, test.code)
+		writeModuleError(capture, nil, test.status, test.code)
 		if capture.kind != test.kind || capture.code != test.code {
 			t.Fatalf("status=%d kind=%q code=%q", test.status, capture.kind, capture.code)
 		}
