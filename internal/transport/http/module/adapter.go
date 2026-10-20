@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/domainry/domainry-foundation/modulehttp"
+	"github.com/domainry/domainry-foundation/telemetry"
 	identitysdk "github.com/domainry/domainry-identity-sdk"
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 )
@@ -84,6 +85,7 @@ func (s *adapter) metrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeModuleError(w http.ResponseWriter, status int, code string) {
+	telemetry.RecordHTTPStatusError(w, status, code)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
