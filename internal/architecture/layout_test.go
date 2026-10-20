@@ -22,7 +22,7 @@ func repositoryRoot(t *testing.T) string {
 
 func TestMonitoringUsesLayeredSourceLayout(t *testing.T) {
 	root := repositoryRoot(t)
-	for _, required := range []string{"cmd/monitoring-server", "internal/application/monitoring", "internal/assembly/module", "internal/assembly/saas", "internal/transport/http/module", "internal/transport/http/saas", "module", "saas"} {
+	for _, required := range []string{"cmd/monitoring-server", "internal/application/monitoring", "internal/assembly/module", "internal/assembly/saas", "internal/transport/http/module", "internal/transport/http/saas", "module"} {
 		if info, err := os.Stat(filepath.Join(root, required)); err != nil || !info.IsDir() {
 			t.Errorf("required Monitoring boundary %q is missing", required)
 		}
@@ -34,9 +34,39 @@ func TestMonitoringUsesLayeredSourceLayout(t *testing.T) {
 	}
 }
 
+func TestRepositoryAndAssemblyExposeOnlyCanonicalEntrypoints(t *testing.T) {
+	root := repositoryRoot(t)
+	rootEntries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootAllowed := map[string]bool{"cmd": true, "docs": true, "internal": true, "module": true}
+	for _, entry := range rootEntries {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if !rootAllowed[entry.Name()] {
+			t.Errorf("unreviewed Monitoring root directory %q", entry.Name())
+		}
+	}
+	assemblyEntries, err := os.ReadDir(filepath.Join(root, "internal", "assembly"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assemblyAllowed := map[string]bool{"module": true, "saas": true}
+	for _, entry := range assemblyEntries {
+		if strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if !entry.IsDir() || !assemblyAllowed[entry.Name()] {
+			t.Errorf("internal/assembly contains non-deployment entry %q", entry.Name())
+		}
+	}
+}
+
 func TestPublicPackagesRemainThinFacades(t *testing.T) {
 	root := repositoryRoot(t)
-	for _, name := range []string{"module", "saas"} {
+	for _, name := range []string{"module"} {
 		entries, err := os.ReadDir(filepath.Join(root, name))
 		if err != nil {
 			t.Fatal(err)

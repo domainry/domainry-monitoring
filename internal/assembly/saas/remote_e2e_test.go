@@ -9,8 +9,8 @@ import (
 	monitoringsdk "github.com/domainry/domainry-monitoring-sdk"
 	"github.com/domainry/domainry-monitoring-sdk/modulehost"
 	"github.com/domainry/domainry-monitoring-sdk/remote"
+	monitoringsaas "github.com/domainry/domainry-monitoring/internal/assembly/saas"
 	monitoringmodule "github.com/domainry/domainry-monitoring/module"
-	monitoringsaas "github.com/domainry/domainry-monitoring/saas"
 )
 
 type remoteHost struct{}

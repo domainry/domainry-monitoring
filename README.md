@@ -42,7 +42,7 @@ The versioned API requires a bearer token. TLS is expected to terminate at the d
 ## Source layout
 
 - `module` is the public facade for embedded Runtime composition.
-- `saas` is the public facade for the standalone service.
+- `cmd/monitoring-server` is the standalone process entrypoint and calls the private SaaS assembly directly.
 - `internal/application/monitoring` owns snapshot evaluation.
-- `internal/assembly` composes Module and SaaS topologies.
+- `internal/assembly/module` and `internal/assembly/saas` compose the two deployment topologies.
 - `internal/transport/http` owns the HTTP protocol implementation.

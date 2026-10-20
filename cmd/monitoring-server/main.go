@@ -13,7 +13,7 @@ import (
 
 	"github.com/domainry/domainry-foundation/logging"
 	"github.com/domainry/domainry-foundation/processhost"
-	monitoringsaas "github.com/domainry/domainry-monitoring/saas"
+	monitoringsaas "github.com/domainry/domainry-monitoring/internal/assembly/saas"
 )
 
 func main() {
