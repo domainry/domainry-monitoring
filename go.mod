@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	github.com/domainry/domainry-foundation v0.2.9
-	github.com/domainry/domainry-identity-sdk v0.1.22
-	github.com/domainry/domainry-monitoring-sdk v0.1.8
+	github.com/domainry/domainry-identity-sdk v0.1.27
+	github.com/domainry/domainry-monitoring-sdk v0.1.9
 )
 
 require (
