@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/domainry/domainry-foundation/logging"
 	"github.com/domainry/domainry-foundation/processhost"
 	monitoringsaas "github.com/domainry/domainry-monitoring/saas"
 )
@@ -27,7 +29,16 @@ func run() (runErr error) {
 	if err != nil {
 		return err
 	}
-	defer func() { runErr = observability.Finish(context.Background(), nil, runErr) }()
+	started := false
+	startupFailure := logging.Failure{Stage: "configuration_validate"}
+	defer func() {
+		if !started && runErr != nil {
+			observability.StartFailed(context.Background(), runErr, startupFailure)
+			runErr = errors.Join(runErr, observability.Close(context.Background(), nil))
+			return
+		}
+		runErr = observability.Finish(context.Background(), nil, runErr)
+	}()
 	address := strings.TrimSpace(os.Getenv("ADDR"))
 	if address == "" {
 		address = ":8090"
@@ -36,13 +47,20 @@ func run() (runErr error) {
 	if token == "" {
 		return errors.New("DOMAINRY_MONITORING_TOKEN is required")
 	}
+	startupFailure = logging.Failure{Stage: "module_assembly"}
 	handler, err := monitoringsaas.New(monitoringsaas.Options{BearerToken: token})
 	if err != nil {
 		return err
 	}
 	server := &http.Server{Addr: address, Handler: observability.Handler("public", handler.Routes()), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	startupFailure = logging.Failure{Stage: "listener_bind", Dependency: "public_listener"}
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
 	serveErr := make(chan error, 1)
-	go func() { serveErr <- server.ListenAndServe() }()
+	go func() { serveErr <- server.Serve(listener) }()
+	started = true
 	observability.Started(lifecycle, map[string]any{"listener_group": "public"})
 	select {
 	case <-lifecycle.Done():
