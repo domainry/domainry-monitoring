@@ -3,15 +3,15 @@ module github.com/domainry/domainry-monitoring
 go 1.26.0
 
 require (
-	github.com/domainry/domainry-foundation v0.2.11
-	github.com/domainry/domainry-identity-sdk v0.1.27
-	github.com/domainry/domainry-monitoring-sdk v0.1.10
+	github.com/domainry/domainry-foundation v0.2.12
+	github.com/domainry/domainry-identity-sdk v0.1.32
+	github.com/domainry/domainry-monitoring-sdk v0.1.11
 )
 
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/domainry/domainry-orm v0.1.33 // indirect
+	github.com/domainry/domainry-orm v0.1.34 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
