@@ -3,9 +3,9 @@ module github.com/domainry/domainry-monitoring
 go 1.26.0
 
 require (
-	github.com/domainry/domainry-foundation v0.2.17
-	github.com/domainry/domainry-identity-sdk v0.1.37
-	github.com/domainry/domainry-monitoring-sdk v0.1.15
+	github.com/domainry/domainry-foundation v0.2.18
+	github.com/domainry/domainry-identity-sdk v0.1.38
+	github.com/domainry/domainry-monitoring-sdk v0.1.16
 )
 
 require (
